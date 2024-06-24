@@ -46,4 +46,9 @@ export type Gatherable = {
     interactDistance: number;
 };
 
-export type ClientGatherable = Pick<Gatherable, 'name' | 'skillPermission' | 'skillLevel' | 'objectInfo'>;
+export type ClientGatherable = Pick<
+    Gatherable,
+    'name' | 'skillPermission' | 'skillLevel' | 'objectInfo' | 'interactDistance'
+> & {
+    inRange: boolean;
+};

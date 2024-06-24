@@ -3,7 +3,7 @@ import { useRebar } from '@Server/index.js';
 import { GatherablesEvents } from '../shared/events.js';
 import type { Gatherable, ClientGatherable } from '../shared/gatherable.js';
 
-const gatheringSessionKey = 'gathering-session';
+// const gatheringSessionKey = 'gathering-session';
 
 const Rebar = useRebar();
 
@@ -92,13 +92,15 @@ export function useGatherableSystem() {
             return;
         }
 
-        const { name, skillLevel, skillPermission, objectInfo } = spawnedGatherables.get(uid).data;
+        const { name, skillLevel, skillPermission, objectInfo, interactDistance } = spawnedGatherables.get(uid).data;
 
         const clientGatherable: ClientGatherable = {
             name,
             skillLevel,
             skillPermission,
             objectInfo,
+            interactDistance,
+            inRange: false,
         };
 
         alt.emitClient(player, GatherablesEvents.ON_ENTER, clientGatherable);
@@ -106,6 +108,38 @@ export function useGatherableSystem() {
 
     async function onInteract(player: alt.Player, colshape: alt.Colshape, uid: string) {
         alt.log('onInteract');
+
+        // 1. Is the gatherable spawned and ready?
+        if (gatherablesToRespawn.has(uid)) {
+            alt.log('onEnter: Gatherable has already been looted');
+            return;
+        }
+
+        const gatherable = spawnedGatherables.get(uid);
+
+        // 2. Is the player close enough to the object to interact ??
+        if (colshape.pos.distanceTo(player.pos) > gatherable.data.interactDistance) {
+            alt.log('onInteract: Player is too far away');
+            return;
+        }
+
+        const rPlayer = Rebar.usePlayer(player);
+
+        alt.log(rPlayer.character.permission.hasAnyGroupPermission('gathering', ['gardener']));
+        alt.log(rPlayer.character.permission.hasGroupPermission('gathering', 'gardener'));
+        return;
+
+        // 3. Does the player meet the necessary requirements? (skillLevel, skillPermission and maybe equipment in the future)
+        if (
+            gatherable.data.skillPermission &&
+            !rPlayer.character.permission.hasGroupPermission('gathering', 'gardener')
+        ) {
+            alt.log("onInteract: You don't have the required permission/skill");
+            return;
+        }
+
+        alt.log('onInteract: Player is close enough, DO SOMETHING');
+
         // 1. Is player close enough to the object to interact ??
         // 2. Does the player meet the necessary requirements? (skillLevel, skillPermission and maybe equipment in the future)
         // 3. If so, move the player to the object, this may be handled by the client

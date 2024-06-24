@@ -3,15 +3,14 @@ import * as alt from 'alt-client';
 import { useRebarClient } from '@Client/index.js';
 import { GatherablesEvents } from '../shared/events.js';
 import type { ClientGatherable } from '../shared/gatherable.js';
+import { distance } from '../shared/distance.js';
+import { check } from '@Server/utility/password.js';
 
 const Rebar = useRebarClient();
 const webview = Rebar.webview.useWebview();
 
-let checkPosTick: number;
-
-type UIGatherable = ClientGatherable & { inRange: boolean };
-
-let currentGatherable: UIGatherable | null = null;
+let checkPosTick: number | null = null;
+let currentGatherable: ClientGatherable | null = null;
 
 function updateUIFromCurrentGatherablePosition() {
     // If this is somehow running when no gatherable is in range, clear the tick
@@ -28,10 +27,17 @@ function updateUIFromCurrentGatherablePosition() {
 
     const playerDistanceFromGatherable = distance(currentGatherable.objectInfo.pos, alt.Player.local.pos);
 
-    if (playerDistanceFromGatherable > 3 && currentGatherable.inRange) {
+    const movedOutOfRange =
+        playerDistanceFromGatherable > currentGatherable.interactDistance && currentGatherable.inRange;
+    const movedInToRange =
+        playerDistanceFromGatherable < currentGatherable.interactDistance && !currentGatherable.inRange;
+
+    // TODO: Maybe better handling of scenarios here
+    if (movedOutOfRange) {
         currentGatherable.inRange = false;
+        // TODO: Could make this emit a single property instead of object
         webview.emit(GatherablesEvents.UPDATE_UI, currentGatherable);
-    } else if (playerDistanceFromGatherable < 3 && !currentGatherable.inRange) {
+    } else if (movedInToRange) {
         currentGatherable.inRange = true;
         webview.emit(GatherablesEvents.UPDATE_UI, currentGatherable);
     }
@@ -39,7 +45,7 @@ function updateUIFromCurrentGatherablePosition() {
     webview.emit(GatherablesEvents.UPDATE_UI_POSITION, screenPos);
 }
 
-function updateUI(data: UIGatherable) {
+function updateUI(data: ClientGatherable) {
     webview.emit(GatherablesEvents.UPDATE_UI, data);
 }
 
@@ -51,25 +57,15 @@ function clear() {
     currentGatherable = null;
     hideUI();
     alt.clearEveryTick(checkPosTick);
-}
-
-function distance(vector1: { x: number; y: number; z: number }, vector2: { x: number; y: number; z: number }) {
-    if (vector1 === undefined || vector2 === undefined) {
-        throw new Error('AddVector => vector1 or vector2 is undefined');
-    }
-
-    return Math.sqrt(
-        Math.pow(vector1.x - vector2.x, 2) + Math.pow(vector1.y - vector2.y, 2) + Math.pow(vector1.z - vector2.z, 2),
-    );
+    checkPosTick = null;
 }
 
 alt.onServer(GatherablesEvents.ON_ENTER, (gatherable: ClientGatherable) => {
     alt.log('Entered Gatherable', JSON.stringify(gatherable));
 
-    currentGatherable = {
-        ...gatherable,
-        inRange: false,
-    };
+    if (checkPosTick) return; // This is already running for another gatherable
+
+    currentGatherable = gatherable;
 
     updateUI(currentGatherable);
     checkPosTick = alt.everyTick(updateUIFromCurrentGatherablePosition);
@@ -77,8 +73,9 @@ alt.onServer(GatherablesEvents.ON_ENTER, (gatherable: ClientGatherable) => {
 
 alt.onServer(GatherablesEvents.ON_LEAVE, (gatherable: ClientGatherable) => {
     alt.log('Left Gatherable', JSON.stringify(gatherable));
-    hideUI();
-    alt.clearEveryTick(checkPosTick);
+    clear();
+    // hideUI();
+    // alt.clearEveryTick(checkPosTick);
 });
 
 /*

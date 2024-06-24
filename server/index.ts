@@ -12,7 +12,7 @@ const gatherableSystem = useGatherableSystem();
  */
 export const defaultCharacterData = {
     gathering_skills: {
-        garderner: 0,
+        gardener: 0,
         hunter: 0,
     },
 };
@@ -20,14 +20,16 @@ export const defaultCharacterData = {
 export type Skills = keyof typeof defaultCharacterData.gathering_skills;
 
 events.on('character-bound', (player) => {
+    const rCharacter = Rebar.usePlayer(player).character;
     setupGatherableSkillsIfNotSet(player);
+    rCharacter.permission.addGroupPerm('gathering', 'gardener'); // TODO: REMOVE THIS
     Rebar.player.useWebview(player).show('Interactions', 'page');
 });
 
 const defaultGatherables: Gatherable[] = [
     {
         name: 'Weed Plant',
-        skillPermission: null,
+        skillPermission: 'gardener',
         skillLevel: 0,
         materialQuantityRange: [1, 10],
         objectInfo: {
@@ -38,7 +40,7 @@ const defaultGatherables: Gatherable[] = [
         },
         colShape: { x: 922.3253173828125, y: -175.948974609375, z: 73.50727081298828, radius: 5 },
         respawnDelay: 3000,
-        interactDistance: 1,
+        interactDistance: 3,
     },
 ];
 
