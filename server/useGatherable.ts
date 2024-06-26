@@ -2,6 +2,7 @@ import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
 import { GatherablesEvents } from '../shared/events.js';
 import type { Gatherable, ClientGatherable } from '../shared/gatherable.js';
+import { type defaultCharacterData } from './index.js';
 
 // const gatheringSessionKey = 'gathering-session';
 
@@ -35,10 +36,10 @@ export function useGatherableSystem() {
         //
         const interaction = Rebar.controllers.useInteraction(
             new alt.ColshapeCylinder(
-                gatherable.colShape.x,
-                gatherable.colShape.y,
-                gatherable.colShape.z,
-                gatherable.colShape.radius,
+                gatherable.entity.pos.x,
+                gatherable.entity.pos.y,
+                gatherable.entity.pos.z,
+                gatherable.entity.visibilityRange,
                 2,
             ),
             'player',
@@ -72,11 +73,12 @@ export function useGatherableSystem() {
 
         /**
          * We only create the object if objectInfo is not null
+         * Not all gatherables have objects
          */
-        if (gatherable.data.objectInfo !== null) {
+        if (gatherable.data.entity.model !== null) {
             gatherable.session.object = Rebar.controllers.useObjectGlobal({
-                model: alt.hash(gatherable.data.objectInfo.model),
-                pos: gatherable.data.objectInfo.pos,
+                model: alt.hash(gatherable.data.entity.model),
+                pos: gatherable.data.entity.pos,
             });
         }
 
@@ -84,26 +86,44 @@ export function useGatherableSystem() {
     }
 
     async function onEnter(player: alt.Player, colshape: alt.Colshape, uid: string) {
-        alt.log(`onEnter: ${uid}`);
-
-        // Is the interaction already spawned?
+        // If the gatherable has not yet been spawned, do nothing
         if (gatherablesToRespawn.has(uid)) {
             alt.log('onEnter: Gatherable is not spawned yet');
             return;
         }
 
-        const { name, skillLevel, skillPermission, objectInfo, interactDistance } = spawnedGatherables.get(uid).data;
+        // Might want to update this so UI already knows if player has the skill/perms etc
+        const gatherable = spawnedGatherables.get(uid).data;
+        alt.log(
+            `onEnter: ${gatherable.name} - Required skill: ${gatherable.skillRequired} - Level: ${gatherable.skillLevel}`,
+        );
+        const { name, entity, skillLevel, skillRequired } = gatherable;
+
+        const character = Rebar.usePlayer(player).character;
+
+        const hasSkill = characterHasSkillPermissionToGather(character, gatherable);
+        const hasSkillLevel = characterHasSkillLevelToGather(character, gatherable);
 
         const clientGatherable: ClientGatherable = {
             name,
-            skillLevel,
-            skillPermission,
-            objectInfo,
-            interactDistance,
+            character: {
+                hasSkill,
+                hasSkillLevel,
+            },
+            skill: {
+                type: skillRequired,
+                level: skillLevel,
+            },
+            interactionPos: {
+                x: entity.pos.x,
+                y: entity.pos.y,
+                z: entity.pos.z,
+                range: entity.interactRange,
+            },
             inRange: false,
         };
 
-        alt.emitClient(player, GatherablesEvents.ON_ENTER, clientGatherable);
+        alt.emitClient(player, GatherablesEvents.ON_ENTER, uid, clientGatherable);
     }
 
     async function onInteract(player: alt.Player, colshape: alt.Colshape, uid: string) {
@@ -115,30 +135,24 @@ export function useGatherableSystem() {
             return;
         }
 
-        const gatherable = spawnedGatherables.get(uid);
+        const gatherable = spawnedGatherables.get(uid).data;
+        const isPlayerTooFarAway = colshape.pos.distanceTo(player.pos) > gatherable.entity.interactRange;
 
-        // 2. Is the player close enough to the object to interact ??
-        if (colshape.pos.distanceTo(player.pos) > gatherable.data.interactDistance) {
-            alt.log('onInteract: Player is too far away');
+        if (isPlayerTooFarAway) {
+            alt.log('Interaction Failed: Player is too far away');
             return;
         }
 
-        const rPlayer = Rebar.usePlayer(player);
-
-        alt.log(rPlayer.character.permission.hasAnyGroupPermission('gathering', ['gardener']));
-        alt.log(rPlayer.character.permission.hasGroupPermission('gathering', 'gardener'));
-        return;
+        const character = Rebar.usePlayer(player).character;
 
         // 3. Does the player meet the necessary requirements? (skillLevel, skillPermission and maybe equipment in the future)
-        if (
-            gatherable.data.skillPermission &&
-            !rPlayer.character.permission.hasGroupPermission('gathering', 'gardener')
-        ) {
-            alt.log("onInteract: You don't have the required permission/skill");
+        if (!characterHasPermission(character, gatherable)) {
+            alt.log("Interaction Failed: Player doesn't have the required permission/skill");
             return;
         }
 
-        alt.log('onInteract: Player is close enough, DO SOMETHING');
+        //
+        alt.log('Interaction Success: Do something!');
 
         // 1. Is player close enough to the object to interact ??
         // 2. Does the player meet the necessary requirements? (skillLevel, skillPermission and maybe equipment in the future)
@@ -193,64 +207,97 @@ export function useGatherableSystem() {
         });
     }
 
+    function characterHasSkillPermissionToGather(
+        character: ReturnType<typeof Rebar.usePlayer>['character'],
+        gatherable: Gatherable,
+    ) {
+        if (gatherable.skillRequired === null) return true; // No permission required
+        if (!character.permission.hasGroupPermission('gathering', gatherable.skillRequired)) return false;
+        return true;
+    }
+
+    function characterHasSkillLevelToGather(
+        character: ReturnType<typeof Rebar.usePlayer>['character'],
+        gatherable: Gatherable,
+    ) {
+        if (gatherable.skillLevel <= 0) return true; // No skill level required
+        const characterGatheringSkills = character.getField<typeof defaultCharacterData>('gathering_skills');
+        const characterSkillLevel = characterGatheringSkills[gatherable.skillRequired] as number | undefined;
+
+        if (!characterSkillLevel) return false;
+        if (gatherable.skillLevel > characterSkillLevel) return false;
+
+        return true;
+    }
+
+    function characterHasPermission(
+        character: ReturnType<typeof Rebar.usePlayer>['character'],
+        gatherable: Gatherable,
+    ) {
+        if (!characterHasSkillPermissionToGather(character, gatherable)) return false;
+        if (!characterHasSkillLevelToGather(character, gatherable)) return false;
+
+        return true;
+    }
+
     return { create, spawn, tick };
 }
 
-async function movePedToGatherable(player: alt.Player, gatherable: SessionGatherable) {
-    const gatherablePos = new alt.Vector3(
-        gatherable.data.colShape.x,
-        gatherable.data.colShape.y,
-        gatherable.data.colShape.z,
-    );
+// async function movePedToGatherable(player: alt.Player, gatherable: SessionGatherable) {
+//     const gatherablePos = new alt.Vector3(
+//         gatherable.data.colShape.x,
+//         gatherable.data.colShape.y,
+//         gatherable.data.colShape.z,
+//     );
 
-    // Calculate the direction vector from player to gatherable
-    const direction = gatherablePos.sub(player.pos);
+//     // Calculate the direction vector from player to gatherable
+//     const direction = gatherablePos.sub(player.pos);
 
-    // Normalize the direction vector
-    const normalizedDirection = direction.normalize();
+//     // Normalize the direction vector
+//     const normalizedDirection = direction.normalize();
 
-    // Scale the normalized vector to the desired radius
-    const radius = 1; // TODO: Make this configurable
-    const targetPos = gatherablePos.sub(normalizedDirection.mul(radius));
+//     // Scale the normalized vector to the desired radius
+//     const radius = 1; // TODO: Make this configurable
+//     const targetPos = gatherablePos.sub(normalizedDirection.mul(radius));
 
-    const playerPed = Rebar.controllers.usePed(player);
+//     const playerPed = Rebar.controllers.usePed(player);
 
-    // TODO: maybe use Rebar.player.useNative(player).invoke in the future
-    const offsetRotRadians = (270 * Math.PI) / 180; // Not sure why we have to do this
-    const targetHeadingInRadians = Math.atan2(direction.y, direction.x) + offsetRotRadians;
-    const targetHeadingInDegrees = (targetHeadingInRadians * 180) / Math.PI;
+//     // TODO: maybe use Rebar.player.useNative(player).invoke in the future
+//     const offsetRotRadians = (270 * Math.PI) / 180; // Not sure why we have to do this
+//     const targetHeadingInRadians = Math.atan2(direction.y, direction.x) + offsetRotRadians;
+//     const targetHeadingInDegrees = (targetHeadingInRadians * 180) / Math.PI;
 
-    playerPed.invoke(
-        'taskGoStraightToCoord',
-        targetPos.x,
-        targetPos.y,
-        targetPos.z,
-        1.0,
-        -1,
-        targetHeadingInDegrees,
-        1.0,
-    );
+//     playerPed.invoke(
+//         'taskGoStraightToCoord',
+//         targetPos.x,
+//         targetPos.y,
+//         targetPos.z,
+//         1.0,
+//         -1,
+//         targetHeadingInDegrees,
+//         1.0,
+//     );
 
-    let retries = 0;
-    const retryLimit = 50;
+//     let retries = 0;
+//     const retryLimit = 50;
 
-    await new Promise((resolve, reject) => {
-        const interval = setInterval(async () => {
-            // Have some end state of this
-            if (retries > retryLimit) {
-                clearInterval(interval);
-                reject('Unable to move to gatherable');
-                return;
-            }
+//     await new Promise((resolve, reject) => {
+//         const interval = setInterval(async () => {
+//             // Have some end state of this
+//             if (retries > retryLimit) {
+//                 clearInterval(interval);
+//                 reject('Unable to move to gatherable');
+//                 return;
+//             }
 
-            const result = await playerPed.invokeRpc('isPedStopped');
+//             const result = await playerPed.invokeRpc('isPedStopped');
 
-            if (result) {
-                // player.rot = new alt.Vector3(0.0, 0.0, targetHeading);
-                clearInterval(interval);
-                resolve(true);
-            }
-            retries++;
-        }, 100);
-    });
-}
+//             if (result) {
+//                 // player.rot = new alt.Vector3(0.0, 0.0, targetHeading);
+//                 clearInterval(interval);
+//                 resolve(true);
+//             }
+//             retries++;
+//         }, 100);
+//     });
+// }

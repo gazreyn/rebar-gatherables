@@ -1,4 +1,9 @@
-import { type Skills } from '../server/index.js';
+import { type Skill } from '../server/index.js';
+
+// gatherable.model
+// gatherable.object
+// gatherable.physicalObject
+// gatherable
 
 export type Gatherable = {
     /**
@@ -9,7 +14,7 @@ export type Gatherable = {
      * Rebar Permission required to gather the item
      * @link https://rebarv.com/api/server/document/document-character/#permissions
      */
-    skillPermission: Skills | null;
+    skillRequired: Skill | null;
     /**
      * Used to check if player has required skill level (if skillPermission is set)
      */
@@ -18,37 +23,58 @@ export type Gatherable = {
      * The range of material a gatherable holds, in the form of [min, max]
      */
     materialQuantityRange: [number, number];
-    /**
-     * The position of the interaction
-     * @link https://rebarv.com/api/server/controllers/interaction/#create
-     */
-    colShape: { x: number; y: number; z: number; radius: number };
-    /**
-     * World model - Null if gatherable should be existing object
-     * @link https://gta-objects.xyz/
-     */
-    objectInfo: {
-        model: string;
+    entity: {
+        /**
+         * Object model. Null if gatherable will utilize an existing object
+         * @link https://gta-objects.xyz/
+         */
+        model: string | null;
+        /**
+         * Position of the object and interaction
+         */
         pos: { x: number; y: number; z: number };
         rot: { x: number; y: number; z: number };
         /**
+         * At what point the user will see that the object can be interacted with
+         * @link https://rebarv.com/api/server/controllers/interaction/#create
+         */
+        visibilityRange: number;
+        /**
+         * How far away pressing the interact button will do something
+         */
+        interactRange: number;
+        /**
          * To make sure animations don't go inside the object
          */
-        radius: number;
-    } | null;
+        collisionRange: number;
+    };
     /**
      * The amount of time before a gatherable will respawn.
      */
     respawnDelay: number;
-    /**
-     * How far away someone can interact with the node
-     */
-    interactDistance: number;
 };
 
-export type ClientGatherable = Pick<
-    Gatherable,
-    'name' | 'skillPermission' | 'skillLevel' | 'objectInfo' | 'interactDistance'
-> & {
+// gatherable.skill.type
+// gatherable.player.hasSkill
+
+export type ClientGatherable = {
+    name: string;
+    character: {
+        hasSkill: boolean;
+        hasSkillLevel: boolean;
+        hasEquipment?: boolean;
+    };
+    skill: {
+        type: Skill | null;
+        level: number;
+    };
+    interactionPos: { x: number; y: number; z: number; range: number };
+    // entity: {
+    //     model: string;
+    //     pos: { x: number; y: number; z: number };
+    //     rot: { x: number; y: number; z: number };
+    //     radius: number;
+    //     collisionRange: number;
+    // };
     inRange: boolean;
 };

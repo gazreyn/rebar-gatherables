@@ -8,7 +8,7 @@ const events = useEvents();
 
 const interactionPosition = reactive({ x: 0, y: 0 });
 
-const activeGatherable = ref<(ClientGatherable & { inRange: boolean }) | null>(null);
+const activeGatherable = ref<ClientGatherable | null>(null);
 
 const isHidden = computed(() => {
     return !activeGatherable.value;
@@ -18,6 +18,14 @@ const computedStyles = computed(() => {
     return {
         transform: `translate3d(${interactionPosition.x}px, ${interactionPosition.y}px, 0)`,
     };
+});
+
+const canInteract = computed(() => {
+    return (
+        activeGatherable.value &&
+        activeGatherable.value.character.hasSkill &&
+        activeGatherable.value.character.hasSkillLevel
+    );
 });
 
 events.on(GatherablesEvents.UPDATE_UI_POSITION, (pos: { x: number; y: number; z: number }) => {
@@ -50,7 +58,12 @@ const progress = ref(50);
                         <circle class="fg stroke-slate-50"></circle>
                     </svg>
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="rounded-md border-2 border-x-slate-50 bg-slate-950 px-4 py-1 text-white">E</span>
+                        <span
+                            class="rounded-md border-2 border-x-slate-50 px-4 py-1 text-white"
+                            :class="[canInteract ? 'bg-green-500' : 'bg-red-500']"
+                        >
+                            {{ canInteract ? 'E' : 'X' }}
+                        </span>
                     </div>
                 </div>
             </template>

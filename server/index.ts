@@ -7,6 +7,8 @@ const Rebar = useRebar();
 const events = Rebar.events.useEvents();
 const gatherableSystem = useGatherableSystem();
 
+export type Skill = keyof typeof defaultCharacterData.gathering_skills;
+
 /**
  * Add new gathering skills here
  */
@@ -17,30 +19,43 @@ export const defaultCharacterData = {
     },
 };
 
-export type Skills = keyof typeof defaultCharacterData.gathering_skills;
-
 events.on('character-bound', (player) => {
     const rCharacter = Rebar.usePlayer(player).character;
     setupGatherableSkillsIfNotSet(player);
-    rCharacter.permission.addGroupPerm('gathering', 'gardener'); // TODO: REMOVE THIS
-    Rebar.player.useWebview(player).show('Interactions', 'page');
+    // rCharacter.permission.addGroupPerm('gathering', 'gardener'); // TODO: REMOVE THIS
+    Rebar.player.useWebview(player).show('GatherableInteraction', 'page');
 });
 
 const defaultGatherables: Gatherable[] = [
     {
         name: 'Weed Plant',
-        skillPermission: 'gardener',
+        skillRequired: 'gardener',
         skillLevel: 0,
         materialQuantityRange: [1, 10],
-        objectInfo: {
+        entity: {
             model: 'bkr_prop_weed_med_01b',
             pos: { x: 922.3253173828125, y: -175.948974609375, z: 73.50727081298828 },
             rot: { x: 0, y: 0, z: 0 },
-            radius: 1,
+            visibilityRange: 5,
+            interactRange: 3,
+            collisionRange: 1,
         },
-        colShape: { x: 922.3253173828125, y: -175.948974609375, z: 73.50727081298828, radius: 5 },
         respawnDelay: 3000,
-        interactDistance: 3,
+    },
+    {
+        name: 'Weed Plant',
+        skillRequired: 'gardener',
+        skillLevel: 0,
+        materialQuantityRange: [1, 10],
+        entity: {
+            model: 'bkr_prop_weed_med_01b',
+            pos: { x: 932.8433837890625, y: -172.8496856689453, z: 73.53227996826172 },
+            rot: { x: 0, y: 0, z: 0 },
+            visibilityRange: 5,
+            interactRange: 3,
+            collisionRange: 1,
+        },
+        respawnDelay: 3000,
     },
 ];
 
@@ -84,14 +99,3 @@ function setupGatherableSkillsIfNotSet(player: alt.Player) {
         },
     });
 }
-
-Rebar.messenger.useMessenger().commands.register({
-    name: '/veh',
-    desc: 'Create a vehicle',
-    callback: (player: alt.Player) => {
-        const vehicle = new alt.Vehicle('infernus', player.pos, player.rot);
-        alt.nextTick(() => {
-            player.setIntoVehicle(vehicle, 1);
-        });
-    },
-});
