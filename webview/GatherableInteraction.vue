@@ -34,51 +34,9 @@ events.on(GatherablesEvents.UI_CLEAR, () => {
     });
 });
 
-// events.on(GatherablesEvents.UI_UPDATE_GATHERABLE_POS_BY_UID, (uid: string, pos: { x: number; y: number; z: number }) => {
-//     const uiSizeOffet = 80 / 2; // 40px
-//     gatherablesInRange.value.get(uid).interactionPos.x = pos.x - uiSizeOffet;
-//     gatherablesInRange.value.get(uid).interactionPos.y = pos.y - uiSizeOffet;
-// });
-
 events.on(GatherablesEvents.UI_UPDATE_ALL_GATHERABLES, (gatherables: { [uid: string]: ClientGatherable }) => {
     gatherablesInRange.value = gatherables;
-    // console.log(gatherables.keys());
-    // console.log(JSON.stringify(gatherables));
-    // gatherablesInRange.value = gatherables;
 });
-
-// const interactionPosition = reactive({ x: 0, y: 0 });
-
-// const activeGatherable = ref<ClientGatherable | null>(null);
-
-// const isHidden = computed(() => {
-//     return !activeGatherable.value;
-// });
-
-// const computedStyles = computed(() => {
-//     return {
-//         transform: `translate3d(${interactionPosition.x}px, ${interactionPosition.y}px, 0)`,
-//     };
-// });
-
-// const canInteract = computed(() => {
-//     return (
-//         activeGatherable.value &&
-//         activeGatherable.value.character.hasSkill &&
-//         activeGatherable.value.character.hasSkillLevel
-//     );
-// });
-
-// events.on(GatherablesEvents.UPDATE_UI_POSITION, (pos: { x: number; y: number; z: number }) => {
-//     const uiSizeOffet = 80 / 2; // 40px
-
-//     interactionPosition.x = pos.x - uiSizeOffet;
-//     interactionPosition.y = pos.y - uiSizeOffet;
-// });
-
-// events.on(GatherablesEvents.UPDATE_UI, (gatherable: (ClientGatherable & { inRange: boolean }) | null) => {
-//     activeGatherable.value = gatherable;
-// });
 </script>
 
 <template>
