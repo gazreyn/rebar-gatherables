@@ -20,7 +20,7 @@ export const defaultCharacterData = {
 };
 
 events.on('character-bound', (player) => {
-    const rCharacter = Rebar.usePlayer(player).character;
+    // const rCharacter = Rebar.usePlayer(player).character;
     setupGatherableSkillsIfNotSet(player);
     // rCharacter.permission.addGroupPerm('gathering', 'gardener'); // TODO: REMOVE THIS
     Rebar.player.useWebview(player).show('GatherableInteraction', 'page');
@@ -36,8 +36,8 @@ const defaultGatherables: Gatherable[] = [
             model: 'bkr_prop_weed_med_01b',
             pos: { x: 922.3253173828125, y: -175.948974609375, z: 73.50727081298828 },
             rot: { x: 0, y: 0, z: 0 },
-            visibilityRange: 5,
-            interactRange: 3,
+            visibilityRange: 6,
+            interactRange: 2,
             collisionRange: 1,
         },
         respawnDelay: 3000,
@@ -51,8 +51,46 @@ const defaultGatherables: Gatherable[] = [
             model: 'bkr_prop_weed_med_01b',
             pos: { x: 932.8433837890625, y: -172.8496856689453, z: 73.53227996826172 },
             rot: { x: 0, y: 0, z: 0 },
-            visibilityRange: 5,
-            interactRange: 3,
+            visibilityRange: 6,
+            interactRange: 2,
+            collisionRange: 1,
+        },
+        respawnDelay: 3000,
+    },
+    {
+        name: 'Weed Plant',
+        skillRequired: 'gardener',
+        skillLevel: 0,
+        materialQuantityRange: [1, 10],
+        entity: {
+            model: 'bkr_prop_weed_med_01b',
+            pos: {
+                x: 926.1430053710938,
+                y: -173.84901428222656,
+                z: 73.37063598632812,
+            },
+            rot: { x: 0, y: 0, z: 0 },
+            visibilityRange: 6,
+            interactRange: 2,
+            collisionRange: 1,
+        },
+        respawnDelay: 3000,
+    },
+    {
+        name: 'Weed Plant',
+        skillRequired: 'gardener',
+        skillLevel: 0,
+        materialQuantityRange: [1, 10],
+        entity: {
+            model: 'bkr_prop_weed_med_01b',
+            pos: {
+                x: 925.7051391601562,
+                y: -177.15283203125,
+                z: 73.398193359375,
+            },
+            rot: { x: 0, y: 0, z: 0 },
+            visibilityRange: 6,
+            interactRange: 2,
             collisionRange: 1,
         },
         respawnDelay: 3000,
