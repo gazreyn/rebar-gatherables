@@ -32,27 +32,27 @@ function updateUIPosition() {
 
         if (movedOutOfRange) {
             gatherable.inRange = false;
-            webview.emit(GatherablesEvents.UI_UPDATE_GATHERABLE_BY_UID, uid, gatherable);
+            webview.emit(GatherablesEvents.toWebview.UPDATE_GATHERABLE, uid, gatherable);
         } else if (movedInToRange) {
             gatherable.inRange = true;
-            webview.emit(GatherablesEvents.UI_UPDATE_GATHERABLE_BY_UID, uid, gatherable);
+            webview.emit(GatherablesEvents.toWebview.UPDATE_GATHERABLE, uid, gatherable);
         }
 
         const screenPos = alt.worldToScreen(x, y, z + 1);
         gatherablePositions[uid] = screenPos;
     }
 
-    webview.emit(GatherablesEvents.UI_UPDATE_GATHERABLE_POS, gatherablePositions);
+    webview.emit(GatherablesEvents.toWebview.UPDATE_WORLD_POSITIONS, gatherablePositions);
 }
 
 function updateGatherablesInUI(gatherables: { [uid: string]: ClientGatherable }) {
     alt.log('updateGatherablesInUI');
-    webview.emit(GatherablesEvents.UI_UPDATE_ALL_GATHERABLES, gatherables);
+    webview.emit(GatherablesEvents.toWebview.UPDATE_GATHERABLES, gatherables);
 }
 
 function clearUI() {
     // Maybe TODO: Clear the UI
-    webview.emit(GatherablesEvents.UI_CLEAR);
+    webview.emit(GatherablesEvents.toWebview.CLEAR);
 }
 
 function cleanUp() {
@@ -77,5 +77,11 @@ function playerLeftGatherable(uid: string) {
     delete gatherablesInRange[uid];
 }
 
-alt.onServer(GatherablesEvents.ON_ENTER, playerEnteredGatherable);
-alt.onServer(GatherablesEvents.ON_LEAVE, playerLeftGatherable);
+function playerPickedUpGatherable(uid: string) {
+    alt.log('Picked up Gatherable', uid);
+    delete gatherablesInRange[uid];
+}
+
+alt.onServer(GatherablesEvents.toClient.ENTER, playerEnteredGatherable);
+alt.onServer(GatherablesEvents.toClient.LEAVE, playerLeftGatherable);
+alt.onServer(GatherablesEvents.toClient.PICKUP, playerPickedUpGatherable);

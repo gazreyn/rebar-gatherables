@@ -3,6 +3,7 @@ import { useRebar } from '@Server/index.js';
 import { GatherablesEvents } from '../shared/events.js';
 import type { Gatherable, ClientGatherable } from '../shared/gatherable.js';
 import { type defaultCharacterData } from './index.js';
+import { animations } from './animations.js';
 
 // const gatheringSessionKey = 'gathering-session';
 
@@ -123,7 +124,7 @@ export function useGatherableSystem() {
             inRange: false,
         };
 
-        alt.emitClient(player, GatherablesEvents.ON_ENTER, uid, clientGatherable);
+        alt.emitClient(player, GatherablesEvents.toClient.ENTER, uid, clientGatherable);
     }
 
     async function onInteract(player: alt.Player, colshape: alt.Colshape, uid: string) {
@@ -151,8 +152,13 @@ export function useGatherableSystem() {
             return;
         }
 
-        //
         alt.log('Interaction Success: Do something!');
+
+        /** TODO: make these animations dependant on the gatherable type */
+        await animations.groundSearch(player, 3000);
+        pickup(uid);
+        alt.emitClient(player, GatherablesEvents.toClient.PICKUP, uid);
+        //
 
         // 1. Is player close enough to the object to interact ??
         // 2. Does the player meet the necessary requirements? (skillLevel, skillPermission and maybe equipment in the future)
@@ -162,7 +168,7 @@ export function useGatherableSystem() {
 
     async function onLeave(player: alt.Player, colshape: alt.Colshape, uid: string) {
         alt.log('onLeave');
-        alt.emitClient(player, GatherablesEvents.ON_LEAVE, uid);
+        alt.emitClient(player, GatherablesEvents.toClient.LEAVE, uid);
     }
 
     /**

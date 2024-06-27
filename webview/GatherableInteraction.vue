@@ -10,31 +10,26 @@ const events = useEvents();
 const gatherablesInRange = ref<{ [uid: string]: ClientGatherable }>({});
 const gatherableUIPositions = ref<{ [uid: string]: { x: number; y: number; z: number } }>({});
 
-// const gatherableData = computed(() => {
-//     let newObj = {
-//      };
-// });
-
-events.on(GatherablesEvents.UI_UPDATE_GATHERABLE_BY_UID, (uid: string, gatherable: ClientGatherable) => {
+events.on(GatherablesEvents.toWebview.UPDATE_GATHERABLE, (uid: string, gatherable: ClientGatherable) => {
     console.log('UI_UPDATE_GATHERABLE_BY_UID', uid, gatherable);
     gatherablesInRange.value[uid] = gatherable;
 });
 
 events.on(
-    GatherablesEvents.UI_UPDATE_GATHERABLE_POS,
+    GatherablesEvents.toWebview.UPDATE_WORLD_POSITIONS,
     (gatherablePositions: { [uid: string]: { x: number; y: number; z: number } }) => {
         gatherableUIPositions.value = gatherablePositions;
     },
 );
 
-events.on(GatherablesEvents.UI_CLEAR, () => {
+events.on(GatherablesEvents.toWebview.CLEAR, () => {
     console.log('UI_CLEAR');
     Object.keys(gatherablesInRange.value).forEach((uid) => {
         delete gatherablesInRange.value[uid];
     });
 });
 
-events.on(GatherablesEvents.UI_UPDATE_ALL_GATHERABLES, (gatherables: { [uid: string]: ClientGatherable }) => {
+events.on(GatherablesEvents.toWebview.UPDATE_GATHERABLES, (gatherables: { [uid: string]: ClientGatherable }) => {
     gatherablesInRange.value = gatherables;
 });
 </script>
